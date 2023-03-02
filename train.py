@@ -83,7 +83,7 @@ def train_model(args: dict, device, train_dataloader: DataLoader, model_name = "
 
 def calculate_f1(model_name: str, device, val_dataloader: DataLoader) -> float:
     # Load the model
-    model = AutoModelForSequenceClassification.from_pretrained("model", num_labels=2)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
     model.to(device)
 
     # Use the validation dataset to evaluate the model
