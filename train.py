@@ -28,6 +28,12 @@ def get_dataloaders(args: dict, train_data: pd.DataFrame, val_data: pd.DataFrame
     train_dataset = Dataset.from_pandas(train_data)
     val_dataset = Dataset.from_pandas(val_data)
 
+    # Remove the __index_level_0__ column if it exists in datasets
+    if "__index_level_0__" in train_dataset.column_names:
+        train_dataset = train_dataset.remove_columns(["__index_level_0__"])
+    if "__index_level_0__" in val_dataset.column_names:
+        val_dataset = val_dataset.remove_columns(["__index_level_0__"])
+
     # Create the pre-trained model
     tokenizer = AutoTokenizer.from_pretrained(args["PRETRAINED_MODEL_NAME"])
 
