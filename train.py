@@ -18,33 +18,40 @@ from tqdm import tqdm
 def prepare_dataset(tokenize_function, dataset):
     tokenized_dataset = dataset.map(tokenize_function, batched=True)
     prepared_dataset = tokenized_dataset.remove_columns(["text"])
-    prepared_dataset = prepared_dataset.rename_column("label", "labels")
+    if "label" in prepared_dataset.column_names:
+        prepared_dataset = prepared_dataset.rename_column("label", "labels")
     prepared_dataset.set_format("torch")
     return prepared_dataset
 
 # From pandas dataframe to pytorch dataloader
-def get_dataloaders(args: dict, train_data: pd.DataFrame, val_data: pd.DataFrame):
-    # Hugging face dataset object
-    train_dataset = Dataset.from_pandas(train_data)
-    val_dataset = Dataset.from_pandas(val_data)
-
-    # Remove the __index_level_0__ column if it exists in datasets
-    if "__index_level_0__" in train_dataset.column_names:
-        train_dataset = train_dataset.remove_columns(["__index_level_0__"])
-    if "__index_level_0__" in val_dataset.column_names:
-        val_dataset = val_dataset.remove_columns(["__index_level_0__"])
-
+def get_dataloaders(args: dict, train_data, val_data):
     # Create the pre-trained model
     tokenizer = AutoTokenizer.from_pretrained(args["PRETRAINED_MODEL_NAME"])
-
     def tokenize_function(examples):
         return tokenizer(examples["text"], padding="max_length", truncation=True)
     
-    train_prepared_dataset = prepare_dataset(tokenize_function, train_dataset)
-    train_dataloader = DataLoader(train_prepared_dataset, shuffle=True, batch_size=args["BATCH_SIZE"])
+    train_dataloader = None
+    val_dataloader = None
 
-    val_prepared_dataset = prepare_dataset(tokenize_function, val_dataset)
-    val_dataloader = DataLoader(val_prepared_dataset, batch_size=args["BATCH_SIZE"])
+    # If either train or validation data is not None, we just return None for that
+    if train_data is not None:
+        # Hugging face dataset object
+        train_dataset = Dataset.from_pandas(train_data)
+        # Remove the __index_level_0__ column if it exists in datasets
+        if "__index_level_0__" in train_dataset.column_names:
+            train_dataset = train_dataset.remove_columns(["__index_level_0__"])
+
+        train_prepared_dataset = prepare_dataset(tokenize_function, train_dataset)
+        train_dataloader = DataLoader(train_prepared_dataset, shuffle=True, batch_size=args["BATCH_SIZE"])
+    
+    # Same operations for validation dataset
+    if val_data is not None:
+        val_dataset = Dataset.from_pandas(val_data)
+        if "__index_level_0__" in val_dataset.column_names:
+            val_dataset = val_dataset.remove_columns(["__index_level_0__"])
+        val_prepared_dataset = prepare_dataset(tokenize_function, val_dataset)
+        val_dataloader = DataLoader(val_prepared_dataset, batch_size=args["BATCH_SIZE"])
+
     return train_dataloader, val_dataloader
 
 
